@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const csv = require('csv-express');
 const Item = require('../models/items');
 const Tag = require('../models/tags');
 const User = require('../models/user');
@@ -11,7 +12,8 @@ function updateTags(userName){
 		if(Object.keys(doc).length === 0){ //If user does not have an entry in the tags collection, make one
         	let newUserTag = new Tag({
 								userName: userName,
-								tags: {}
+								tags: {},
+								tagKeys: ''
 							});	
 			newUserTag.save();
 		}
@@ -20,15 +22,17 @@ function updateTags(userName){
     		.then(doc => {
         		let newTag = new Tag({
             		            userName: userName,
-                		        tags: {}
+                		        tags: {},
+								tagKeys: "test"		
                    	 	});
 
         		for(d in doc){ //Loop through all the users items, totaling the tags and adding new ones
             		for(t in doc[d].tags){
-                		if(newTag.tags.has(doc[d].tags[t]))
+                		if(newTag.tags.has(doc[d].tags[t])){
                     		newTag.tags.set(doc[d].tags[t], newTag.tags.get(doc[d].tags[t]) + 1);
-                		else
+                		}else{
                     		newTag.tags.set(doc[d].tags[t], 1);
+						}
             		}
         		}
 
@@ -111,8 +115,8 @@ router.post('/items', (req, res) => {
 		serial: req.headers.serial,
 		price: req.headers.price,
 		tags: req.headers.tags,
-		img: req.body.img,
-		receipt: req.body.receipt
+		//img: req.body.img,
+		//receipt: req.body.receipt
 	});
 
 	newItem.save()
@@ -123,6 +127,15 @@ router.post('/items', (req, res) => {
 	.catch( err => {
 		res.status(500).json({error: err}); //Internal Service Error
 	});
+});
+
+router.patch('/items/img', (req, res) => {
+	if(!req.headers.hasOwnProperty('id'))
+		res.status(418).json({error: 'ID not specified'});
+
+	Item.findByIdAndUpdate(req.headers.id, req.body, {new: true}, (err, doc)=>{res.status(200).json(doc)});
+	
+
 });
 
 //Remove an item
@@ -164,6 +177,32 @@ router.delete('/items/id', (req, res) => {
 	.catch( err => {
 		res.status(500).json({error: err}); //Internal Serice Error
 	});
+});
+
+// Export user items
+router.get('/items/exporttocsv', function(req, res, next) {
+    var filename   = "items.csv";
+    var dataArray;
+
+    if(!req.headers.hasOwnProperty('username'))
+        res.status(418).json({error: "Username not specified"}); //Teapot : Malformed Request
+
+    let obj;
+
+    if(!req.headers.hasOwnProperty('itemname')){
+        obj = {userName: req.headers.username};
+    }else{
+        obj = {userName: req.headers.username, itemName: req.headers.itemname};
+    }
+
+    Item.find(obj).lean().exec({}, function(err, items) {
+        if (err) res.send(err);
+
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader("Content-Disposition", 'attachment; filename='+filename);
+        res.csv(items, true);
+    });
 });
 
 module.exports = router;

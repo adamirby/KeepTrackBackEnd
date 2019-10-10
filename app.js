@@ -9,8 +9,8 @@ app.use(express.json());
 app.use('/', require('./routes/user'));
 app.use('/', require('./routes/item'));
 app.use('/', require('./routes/tag'));
-app.use(bodyParser.json({ limit: '50mb'}));
-app.use(bodyParser.urlencoded({ extended: true, limit: '50mb'}));
+//app.use(bodyParser.json({ limit: '50mb'}));
+//app.use(bodyParser.urlencoded({ extended: true, limit: '50mb'}));
 //Connect to DB
 mongoose.connect('mongodb://127.0.0.1:27017/KeepTrack', 
 	{ useNewUrlParser: true,  useUnifiedTopology: true },
