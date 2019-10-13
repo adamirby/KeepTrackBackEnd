@@ -67,6 +67,8 @@ router.get('/items', (req, res) => {
 	}
 
 	Item.find(obj)
+	.collation({'locale' : 'en'})
+	.sort({itemName : 1})
 	.then( doc => { 
 		if(Object.keys(doc).length === 0)
 			res.status(404).json({error: "Item(s) not located"}); //Not found
@@ -184,22 +186,18 @@ router.get('/items/exporttocsv', function(req, res, next) {
     var filename   = "items.csv";
     var dataArray;
 
+	
     if(!req.headers.hasOwnProperty('username'))
         res.status(418).json({error: "Username not specified"}); //Teapot : Malformed Request
 
-    let obj;
+    let obj = {userName: req.headers.username};
 
-    if(!req.headers.hasOwnProperty('itemname')){
-        obj = {userName: req.headers.username};
-    }else{
-        obj = {userName: req.headers.username, itemName: req.headers.itemname};
-    }
-
-    Item.find(obj).lean().exec({}, function(err, items) {
+    Item.find(obj, ['_id', 'itemName', 'price', 'serial', 'location'],{sort:{itemName: 1}} ).lean().exec({}, function(err, items) {
         if (err) res.send(err);
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/csv');
+		//res.set('Content-Type', 'text/csv');
         res.setHeader("Content-Disposition", 'attachment; filename='+filename);
         res.csv(items, true);
     });
